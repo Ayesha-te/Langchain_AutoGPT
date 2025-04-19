@@ -11,7 +11,7 @@ apikey = os.getenv("apikey")
 os.environ['TOGETHER_API_KEY'] = apikey
 
 # App framework
-st.title('🦜🔗 YouTube GPT Creator')
+st.title('🦜🔗  GPT Creator')
 prompt = st.text_input('Plug in your prompt here') 
 
 # Prompt templates
