@@ -1,0 +1,4 @@
+streamlit
+langchain
+together-ai
+wikipedia
