@@ -1,4 +1,4 @@
 streamlit
 langchain-community
 wikipedia
-
+openai
