@@ -1,11 +1,11 @@
 # Bring in dependencies
 import os
 import streamlit as st 
-from langchain.llms import OpenAI
+from langchain_openai import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain 
 from langchain.memory import ConversationBufferMemory
-from langchain.utilities import WikipediaAPIWrapper 
+from langchain_community.utilities import WikipediaAPIWrapper 
 
 # Set OpenAI API key using Streamlit secrets
 os.environ['OPENAI_API_KEY'] = st.secrets["openai"]["apikey"]
