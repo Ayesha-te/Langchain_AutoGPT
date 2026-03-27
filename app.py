@@ -1,47 +1,49 @@
-# Bring in dependencies
-import os
-import streamlit as st 
-from langchain_openai import OpenAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain 
-from langchain.memory import ConversationBufferMemory
-from langchain_community.utilities import WikipediaAPIWrapper 
+import streamlit as st
+from openai import OpenAI
+from wikipedia import summary
 
-# Set OpenAI API key using Streamlit secrets
-os.environ['OPENAI_API_KEY'] = st.secrets["openai"]["apikey"]
 
-# App framework
-st.title('🦜🔗 YouTube GPT Creator')
-prompt = st.text_input('Plug in your prompt here') 
+def get_client() -> OpenAI:
+    return OpenAI(api_key=st.secrets["openai"]["apikey"])
 
-# Prompt templates
-title_template = PromptTemplate(
-    input_variables=['topic'], 
-    template='Write me a YouTube video title about {topic}'
-)
 
-script_template = PromptTemplate(
-    input_variables=['title', 'wikipedia_research'], 
-    template='Write me a YouTube video script based on this title: "{title}" while leveraging this Wikipedia research: {wikipedia_research}'
-)
+def generate_text(system_prompt: str, user_prompt: str) -> str:
+    response = get_client().chat.completions.create(
+        model="gpt-4o-mini",
+        temperature=0.9,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return response.choices[0].message.content or ""
 
-# Memory for tracking conversation
-title_memory = ConversationBufferMemory(input_key='topic', memory_key='chat_history')
-script_memory = ConversationBufferMemory(input_key='title', memory_key='chat_history')
 
-# Language models
-llm = OpenAI(temperature=0.9) 
-title_chain = LLMChain(llm=llm, prompt=title_template, verbose=True, output_key='title', memory=title_memory)
-script_chain = LLMChain(llm=llm, prompt=script_template, verbose=True, output_key='script', memory=script_memory)
+st.title("🦜🔗 YouTube GPT Creator")
+prompt = st.text_input("Plug in your prompt here")
 
-# Wikipedia wrapper
-wiki = WikipediaAPIWrapper()
+if "title_history" not in st.session_state:
+    st.session_state.title_history = []
+if "script_history" not in st.session_state:
+    st.session_state.script_history = []
 
-# Run app logic when prompt is entered
-if prompt: 
-    title = title_chain.run(prompt)
-    wiki_research = wiki.run(prompt) 
-    script = script_chain.run(title=title, wikipedia_research=wiki_research)
+if prompt:
+    try:
+        wiki_research = summary(prompt, sentences=3, auto_suggest=False)
+    except Exception:
+        wiki_research = "No Wikipedia summary was found for this topic."
+
+    title = generate_text(
+        "You create catchy YouTube video titles.",
+        f"Write me one compelling YouTube video title about: {prompt}",
+    )
+    script = generate_text(
+        "You write engaging YouTube scripts.",
+        f'Write a YouTube video script based on this title: "{title}" while leveraging this Wikipedia research: {wiki_research}',
+    )
+
+    st.session_state.title_history.append(title)
+    st.session_state.script_history.append(script)
 
     st.write("### Generated Title")
     st.success(title)
@@ -49,11 +51,11 @@ if prompt:
     st.write("### Video Script")
     st.write(script)
 
-    with st.expander('📝 Title History'): 
-        st.info(title_memory.buffer)
+    with st.expander("📝 Title History"):
+        st.info("\n\n".join(st.session_state.title_history))
 
-    with st.expander('📜 Script History'): 
-        st.info(script_memory.buffer)
+    with st.expander("📜 Script History"):
+        st.info("\n\n".join(st.session_state.script_history))
 
-    with st.expander('📚 Wikipedia Research'): 
+    with st.expander("📚 Wikipedia Research"):
         st.info(wiki_research)
